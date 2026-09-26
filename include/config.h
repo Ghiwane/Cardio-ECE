@@ -12,6 +12,7 @@
 //buzzer (FS4)
 #define PIN_BUZZER        5
 #define PIN_BOUTON_BEEP   6
+#define DUREE_MIN_REBOND  50 // durée du rebond du bouton en ms
 
 //bouton / encodeur (FS6)
 #define PIN_BOUTON_ENREGISTRER  7
