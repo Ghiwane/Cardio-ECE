@@ -13,13 +13,17 @@ void etatBuzzer(int etatBouton){
     static int etatPrecedent = HIGH; // c'est pour verifier qu'on appuie bien sur le bouton 
     static unsigned long dernierChangement = 0;
 
-    if(etatBouton == LOW && etatPrecedent == HIGH && millis() - dernierChangement > DUREE_MIN_REBOND){ // détection d'un seul appui sans interruption
-        if(buzzerActif) buzzerActif = false; // on change l'etat du buzzer
-        else buzzerActif = true;
+    if (etatBouton != etatPrecedent){
+        if(millis() - dernierChangement > DUREE_MIN_REBOND){// détection d'un seul appui sans interruption
+            if(etatBouton == LOW){
+                if(buzzerActif) buzzerActif = false; // on change l'etat du buzzer
+                else buzzerActif = true;
+            }
+            
+        etatPrecedent = etatBouton; // pour savoir quand on n'appuie plus sur le bouton
         dernierChangement = millis(); // sauvegarde du moment d'appuie
+        }
     }
-
-    etatPrecedent = etatBouton; // pour savoir quand on n'appuie plus sur le bouton
 }
 
 void gererBuzzer(float bpm){
