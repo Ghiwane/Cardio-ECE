@@ -23,6 +23,8 @@
 //Seuils fréquence cardiaque (FS3/FS4) en bpm
 #define SEUIL_BPM_BAS     60
 #define SEUIL_BPM_HAUT    100
+#define BPM_MIN 30
+#define BPM_MAX 220
 
 
 #endif
