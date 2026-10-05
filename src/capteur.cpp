@@ -126,8 +126,3 @@ int ppgTraiter() {
 // redirection n'est definie qu'apres.)
 #define analogRead(p) ppgTraiter()
 
-// ===== TEST DU MODULE CAPTEUR : Serial Plotter OU Serial Monitor =====
-#undef analogRead   // on retablit le vrai analogRead pour lire aussi le signal brut
-
-#define MODE_PLOTTER   true   // true = courbes (Serial Plotter) ; false = texte (Serial Monitor)
-#define PERIODE_TEST_MS 25    // simule le temps d'un display() de l'ecran (~30-40 Hz) ; mettre 0 pour aller vite
