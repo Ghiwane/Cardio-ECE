@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-const int   PPG_PIN         = A0;
 const float PPG_TAU_MOY_MS  = 1000.0;   // constante de temps de la moyenne (tendance)
 const float PPG_TAU_AMP_MS  = 5000.0;   // "oubli" de l'amplitude max
 const float PPG_AMP_MIN     = 10.0;     // evite d'amplifier le bruit sans doigt
@@ -13,8 +12,6 @@ const unsigned long PPG_REFRACT_MS = 300;    // pas deux battements a moins de 3
 const unsigned long PPG_TIMEOUT_MS = 3000;   // aucun battement depuis 3 s -> invalide
 const unsigned long PPG_STABIL_MS  = 2000;   // on attend 2 s avant de detecter
 const int   PPG_NB_INTERV   = 5;        // moyenne sur 5 intervalles
-const int   PPG_BPM_MIN     = 40;       // hors de [40 ; 200] : valeur aberrante
-const int   PPG_BPM_MAX     = 200;
 const int   PPG_ECRAN_CENTRE = 512;     // norm = 0  -> milieu de l'ecran
 const int   PPG_ECRAN_AMPL   = 400;     // norm = 1  -> +400 sur l'echelle 0..1023
 
@@ -36,11 +33,11 @@ float ppgMoyenneIntervalles() {
   return (float)s / ppgNbInterv;
 }
 
-// Remplace analogRead : lit le capteur, traite le signal, renvoie 0..1023 pour l'ecran
+// Lit le capteur, traite le signal, renvoie 0..1023 pour l'ecran
 int ppgTraiter() {
   unsigned long now = millis();
   long sommeBrut = 0;
-  for (int i = 0; i < 8; i++) sommeBrut += analogRead(PPG_PIN);   // 8 lectures moyennees (~1 ms)
+  for (int i = 0; i < 8; i++) sommeBrut += analogRead(PIN_CAPTEUR);   // 8 lectures moyennees (~1 ms)
   int brut = sommeBrut / 8;
 
   if (!ppgPret) {                        // premiere lecture : initialisation
@@ -111,7 +108,7 @@ int ppgTraiter() {
       b = 0;
     }
 
-    ppgBpmValide = (ppgNbInterv >= 3) && (b >= PPG_BPM_MIN) && (b <= PPG_BPM_MAX);
+    ppgBpmValide = (ppgNbInterv >= 3) && (b >= BPM_MIN) && (b <= BPM_MAX);
     ppgBpm = ppgBpmValide ? b : 0;
   }
   ppgNormPrec = ppgNorm;
@@ -120,9 +117,3 @@ int ppgTraiter() {
   int v = PPG_ECRAN_CENTRE + (int)(ppgNorm * PPG_ECRAN_AMPL);
   return constrain(v, 0, 1023);
 }
-
-// Redirige le analogRead(PIN_CAPTEUR) du code d'affichage vers ppgTraiter(),
-// sans modifier ce code. (Mon code ci-dessus utilise le vrai analogRead, car la
-// redirection n'est definie qu'apres.)
-#define analogRead(p) ppgTraiter()
-

@@ -1,27 +1,27 @@
 #include "horloge.h"
+#include "config.h"
 
 // ===== MODULE HORLOGE DS1302 (FS2) - version projet final =====
 // Fonctions a utiliser dans le reste du projet :
-//   horlogeInit()            -> a appeler dans setup()
-//   horlogeMettreAJour()     -> a appeler dans loop() (lit le module toutes les 200 ms)
-//   horlogeTexte(buf)        -> remplit buf avec "HH:MM:SS" (buf de 9 caracteres minimum)
-//   horlogeRegler(h, mi, s)  -> regle l'heure
-//   horlogeCommandeSerie()   -> reglage par le moniteur serie : T14:32:00 (optionnel)
-// Variables lisibles : heureH, heureM, heureS
-
-// ---------- Broches (a changer si elles servent a autre chose) ----------
-const int PIN_CLK = 7;
-const int PIN_DAT = 8;
-const int PIN_RST = 9;   // CE du DS1302
+//   horlogeInit()                -> a appeler dans setup()
+//   horlogeMettreAJour()         -> a appeler dans loop() (lit le module toutes les 200 ms)
+//   horlogeRegler(h, mi, s)      -> regle l'heure
+//   horlogeReglerDate(j, mo, a)  -> regle la date (a = 2 derniers chiffres de l'annee)
+//   horlogeDateTexte(buf)        -> remplit buf avec "JJ/MM/AAAA" (buf de 11 caracteres minimum)
+// Variable lisible : maintenant (date et heure)
+// Broches : PIN_RTC_CLK, PIN_RTC_DAT, PIN_RTC_RST dans config.h
 
 // ---------- Registres du DS1302 ----------
 const byte REG_SEC     = 0x80;
 const byte REG_MIN     = 0x82;
 const byte REG_HEURE   = 0x84;
+const byte REG_DATE    = 0x86;
+const byte REG_MOIS    = 0x88;
+const byte REG_ANNEE   = 0x8C;
 const byte REG_PROTECT = 0x8E;
 
-// ---------- Heure courante ----------
-byte heureH = 0, heureM = 0, heureS = 0;
+// ---------- Date et heure courantes ----------
+DateHeure maintenant = {1, 1, 2000, 0, 0, 0};
 unsigned long derniereLecture = 0;
 const unsigned long PERIODE_LECTURE_MS = 200;
 
@@ -31,43 +31,43 @@ byte bcdVersDec(byte b) { return ((b >> 4) * 10) + (b & 0x0F); }
 
 // ---------- Communication 3 fils avec le DS1302 ----------
 void ecrireOctet(byte b) {
-  pinMode(PIN_DAT, OUTPUT);
+  pinMode(PIN_RTC_DAT, OUTPUT);
   for (int i = 0; i < 8; i++) {
-    digitalWrite(PIN_DAT, (b >> i) & 1);
-    digitalWrite(PIN_CLK, HIGH);
+    digitalWrite(PIN_RTC_DAT, (b >> i) & 1);
+    digitalWrite(PIN_RTC_CLK, HIGH);
     delayMicroseconds(2);
-    digitalWrite(PIN_CLK, LOW);
+    digitalWrite(PIN_RTC_CLK, LOW);
     delayMicroseconds(2);
   }
 }
 
 byte lireOctet() {
-  pinMode(PIN_DAT, INPUT);
+  pinMode(PIN_RTC_DAT, INPUT);
   byte v = 0;
   for (int i = 0; i < 8; i++) {
-    if (digitalRead(PIN_DAT)) v |= (1 << i);
-    digitalWrite(PIN_CLK, HIGH);
+    if (digitalRead(PIN_RTC_DAT)) v |= (1 << i);
+    digitalWrite(PIN_RTC_CLK, HIGH);
     delayMicroseconds(2);
-    digitalWrite(PIN_CLK, LOW);
+    digitalWrite(PIN_RTC_CLK, LOW);
     delayMicroseconds(2);
   }
   return v;
 }
 
 void ecrireRegistre(byte reg, byte val) {
-  digitalWrite(PIN_CLK, LOW);
-  digitalWrite(PIN_RST, HIGH);
+  digitalWrite(PIN_RTC_CLK, LOW);
+  digitalWrite(PIN_RTC_RST, HIGH);
   ecrireOctet(reg);
   ecrireOctet(val);
-  digitalWrite(PIN_RST, LOW);
+  digitalWrite(PIN_RTC_RST, LOW);
 }
 
 byte lireRegistre(byte reg) {
-  digitalWrite(PIN_CLK, LOW);
-  digitalWrite(PIN_RST, HIGH);
+  digitalWrite(PIN_RTC_CLK, LOW);
+  digitalWrite(PIN_RTC_RST, HIGH);
   ecrireOctet(reg | 0x01);   // bit0 = 1 -> lecture
   byte v = lireOctet();
-  digitalWrite(PIN_RST, LOW);
+  digitalWrite(PIN_RTC_RST, LOW);
   return v;
 }
 
@@ -78,22 +78,46 @@ void horlogeRegler(byte h, byte mi, byte s) {
   ecrireRegistre(REG_MIN,   decVersBcd(mi));
   ecrireRegistre(REG_HEURE, decVersBcd(h));   // mode 24 h
   ecrireRegistre(REG_PROTECT, 0x80);
-  heureH = h; heureM = mi; heureS = s;
+  maintenant.heure = h; maintenant.minute = mi; maintenant.seconde = s;
+}
+
+void horlogeReglerDate(byte j, byte mo, byte a) {
+  ecrireRegistre(REG_PROTECT, 0x00);
+  ecrireRegistre(REG_DATE,  decVersBcd(j));
+  ecrireRegistre(REG_MOIS,  decVersBcd(mo));
+  ecrireRegistre(REG_ANNEE, decVersBcd(a));
+  ecrireRegistre(REG_PROTECT, 0x80);
+  maintenant.jour = j; maintenant.mois = mo; maintenant.annee = 2000 + a;
 }
 
 void horlogeInit() {
-  pinMode(PIN_CLK, OUTPUT);
-  pinMode(PIN_RST, OUTPUT);
-  digitalWrite(PIN_RST, LOW);
-  digitalWrite(PIN_CLK, LOW);
+  pinMode(PIN_RTC_CLK, OUTPUT);
+  pinMode(PIN_RTC_RST, OUTPUT);
+  digitalWrite(PIN_RTC_RST, LOW);
+  digitalWrite(PIN_RTC_CLK, LOW);
 
-  // Module arrete (CH = 1) : reglage avec l'heure de compilation, une seule fois.
-  // Sinon on n'y touche pas : l'heure est conservee apres une coupure (ET2.3).
-  if (lireRegistre(REG_SEC) & 0x80) {
+  // Module arrete (CH = 1) ou date incoherente (jamais regle, pile vide) : reglage avec la date
+  // et l'heure de compilation. Sinon on n'y touche pas : l'heure est conservee apres une coupure (ET2.3).
+  // FORCER_REGLAGE_HORLOGE (config.h) permet de le refaire volontairement.
+  byte jourLu = bcdVersDec(lireRegistre(REG_DATE) & 0x3F);
+  byte moisLu = bcdVersDec(lireRegistre(REG_MOIS) & 0x1F);
+  bool dateIncoherente = (jourLu < 1 || jourLu > 31 || moisLu < 1 || moisLu > 12);
+  if (FORCER_REGLAGE_HORLOGE || (lireRegistre(REG_SEC) & 0x80) || dateIncoherente) {
     byte h  = (__TIME__[0] - '0') * 10 + (__TIME__[1] - '0');
     byte mi = (__TIME__[3] - '0') * 10 + (__TIME__[4] - '0');
     byte s  = (__TIME__[6] - '0') * 10 + (__TIME__[7] - '0');
     horlogeRegler(h, mi, s);
+
+    // __DATE__ = "Oct  6 2026" (espace devant le jour s'il n'a qu'un chiffre)
+    // noms des mois en memoire flash (PROGMEM) pour ne pas occuper la RAM
+    static const char moisNoms[] PROGMEM = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    byte mo = 1;
+    for (int i = 0; i < 12; i++) {
+      if (strncmp_P(__DATE__, moisNoms + 3 * i, 3) == 0) mo = i + 1;
+    }
+    byte j = (__DATE__[4] == ' ' ? 0 : __DATE__[4] - '0') * 10 + (__DATE__[5] - '0');
+    byte a = (__DATE__[9] - '0') * 10 + (__DATE__[10] - '0');
+    horlogeReglerDate(j, mo, a);
   }
   derniereLecture = millis() - PERIODE_LECTURE_MS;   // force une lecture immediate
 }
@@ -103,39 +127,30 @@ void horlogeMettreAJour() {
   if (now - derniereLecture < PERIODE_LECTURE_MS) return;
   derniereLecture = now;
 
-  byte s1, s2, mi, h;
+  byte s1, s2, mi, h, j, mo, a;
+  int essais = 0;
   do {                                    // relit si les secondes ont change pendant la lecture
     s1 = lireRegistre(REG_SEC);
     mi = lireRegistre(REG_MIN);
     h  = lireRegistre(REG_HEURE);
+    j  = lireRegistre(REG_DATE);
+    mo = lireRegistre(REG_MOIS);
+    a  = lireRegistre(REG_ANNEE);
     s2 = lireRegistre(REG_SEC);
-  } while (s1 != s2);
+    essais++;
+  } while (s1 != s2 && essais < 3);       // 3 essais max : un module mal branche ne doit pas bloquer la boucle
 
-  heureS = bcdVersDec(s1 & 0x7F);
-  heureM = bcdVersDec(mi & 0x7F);
-  heureH = bcdVersDec(h  & 0x3F);
+  maintenant.seconde = bcdVersDec(s1 & 0x7F);
+  maintenant.minute  = bcdVersDec(mi & 0x7F);
+  maintenant.heure   = bcdVersDec(h  & 0x3F);
+  maintenant.jour    = bcdVersDec(j  & 0x3F);
+  maintenant.mois    = bcdVersDec(mo & 0x1F);
+  maintenant.annee   = 2000 + bcdVersDec(a);
 }
 
-void horlogeTexte(char* buf) {            // buf : au moins 9 caracteres
-  buf[0] = '0' + heureH / 10; buf[1] = '0' + heureH % 10; buf[2] = ':';
-  buf[3] = '0' + heureM / 10; buf[4] = '0' + heureM % 10; buf[5] = ':';
-  buf[6] = '0' + heureS / 10; buf[7] = '0' + heureS % 10; buf[8] = '\0';
+void horlogeDateTexte(char* buf) {        // buf : au moins 11 caracteres
+  buf[0] = '0' + maintenant.jour / 10; buf[1] = '0' + maintenant.jour % 10; buf[2] = '/';
+  buf[3] = '0' + maintenant.mois / 10; buf[4] = '0' + maintenant.mois % 10; buf[5] = '/';
+  buf[6] = '2'; buf[7] = '0';
+  buf[8] = '0' + (maintenant.annee % 100) / 10; buf[9] = '0' + maintenant.annee % 10; buf[10] = '\0';
 }
-
-// Reglage optionnel par le moniteur serie : T14:32:00 (115200 bauds, "Nouvelle ligne")
-void horlogeCommandeSerie() {
-  if (!Serial.available()) return;
-  String ligne = Serial.readStringUntil('\n');
-  ligne.trim();
-  if (ligne.length() >= 9 && ligne[0] == 'T') {
-    byte h  = ligne.substring(1, 3).toInt();
-    byte mi = ligne.substring(4, 6).toInt();
-    byte s  = ligne.substring(7, 9).toInt();
-    if (h < 24 && mi < 60 && s < 60) {
-      horlogeRegler(h, mi, s);
-      Serial.println("Heure reglee");
-    }
-  }
-}
-
-

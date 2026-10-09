@@ -12,7 +12,12 @@ struct DateHeure {
     uint8_t seconde;
 };
 
+extern DateHeure maintenant;   // date et heure courantes, mises a jour par horlogeMettreAJour()
+
 void horlogeInit();
-DateHeure lireHeure();
+void horlogeMettreAJour();
+void horlogeRegler(byte h, byte mi, byte s);
+void horlogeReglerDate(byte j, byte mo, byte a);
+void horlogeDateTexte(char* buf);
 
 #endif
