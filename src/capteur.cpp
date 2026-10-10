@@ -14,6 +14,7 @@ const unsigned long PPG_STABIL_MS  = 2000;   // on attend 2 s avant de detecter
 const int   PPG_NB_INTERV   = 5;        // moyenne sur 5 intervalles
 const int   PPG_ECRAN_CENTRE = 512;     // norm = 0  -> milieu de l'ecran
 const int   PPG_ECRAN_AMPL   = 400;     // norm = 1  -> +400 sur l'echelle 0..1023
+const float PPG_AMP_DOIGT = 25.0; 
 
 // ---- Variables lisibles par le reste du projet ----
 float ppgBpm = 0;            // 0 si la mesure n'est pas fiable (-> tiret a l'ecran)
@@ -69,7 +70,7 @@ int ppgTraiter() {
 
   // 4) Detection : passage du seuil vers le haut, avec hysteresis
   if (now - ppgDebutMs > PPG_STABIL_MS) {
-    if (ppgArme && ppgNormPrec <= PPG_SEUIL_HAUT && ppgNorm > PPG_SEUIL_HAUT) {
+    if (ppgArme && ppgAmp >= PPG_AMP_DOIGT && ppgNormPrec <= PPG_SEUIL_HAUT && ppgNorm > PPG_SEUIL_HAUT) {
       // instant exact du passage, interpole entre les deux echantillons
       float frac = (PPG_SEUIL_HAUT - ppgNormPrec) / (ppgNorm - ppgNormPrec);
       unsigned long tBat = tPrec + (unsigned long)(frac * dt);
@@ -108,7 +109,7 @@ int ppgTraiter() {
       b = 0;
     }
 
-    ppgBpmValide = (ppgNbInterv >= 3) && (b >= BPM_MIN) && (b <= BPM_MAX);
+    ppgBpmValide = (ppgNbInterv >= 3) && (b >= BPM_MIN) && (b <= BPM_MAX) && (ppgAmp >= PPG_AMP_DOIGT);
     ppgBpm = ppgBpmValide ? b : 0;
   }
   ppgNormPrec = ppgNorm;
