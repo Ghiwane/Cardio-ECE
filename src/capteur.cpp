@@ -16,12 +16,12 @@ const int   PPG_ECRAN_CENTRE = 512;     // norm = 0  -> milieu de l'ecran
 const int   PPG_ECRAN_AMPL   = 400;     // norm = 1  -> +400 sur l'echelle 0..1023
 const float PPG_AMP_DOIGT = 25.0; 
 
-// ---- Variables lisibles par le reste du projet ----
+// Variables lisibles par le reste du projet 
 float ppgBpm = 0;            // 0 si la mesure n'est pas fiable (-> tiret a l'ecran)
 bool  ppgBpmValide = false;
 float ppgNorm = 0;           // signal recentre et normalise (environ -1..1)
 
-// ---- Variables internes ----
+// Variables internes 
 bool  ppgPret = false, ppgArme = true;
 float ppgMoy = 0, ppgAmp = PPG_AMP_MIN, ppgNormPrec = 0;
 unsigned long ppgPrecMs = 0, ppgDebutMs = 0, ppgDernierBat = 0;
@@ -41,7 +41,7 @@ int ppgTraiter() {
   for (int i = 0; i < 8; i++) sommeBrut += analogRead(PIN_CAPTEUR);   // 8 lectures moyennees (~1 ms)
   int brut = sommeBrut / 8;
 
-  if (!ppgPret) {                        // premiere lecture : initialisation
+  if (!ppgPret) {  // premiere lecture : initialisation
     ppgMoy = brut;
     ppgPrecMs = now;
     ppgDebutMs = now;

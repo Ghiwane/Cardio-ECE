@@ -1,17 +1,7 @@
 #include "horloge.h"
 #include "config.h"
 
-// ===== MODULE HORLOGE DS1302 (FS2) - version projet final =====
-// Fonctions a utiliser dans le reste du projet :
-//   horlogeInit()                -> a appeler dans setup()
-//   horlogeMettreAJour()         -> a appeler dans loop() (lit le module toutes les 200 ms)
-//   horlogeRegler(h, mi, s)      -> regle l'heure
-//   horlogeReglerDate(j, mo, a)  -> regle la date (a = 2 derniers chiffres de l'annee)
-//   horlogeDateTexte(buf)        -> remplit buf avec "JJ/MM/AAAA" (buf de 11 caracteres minimum)
-// Variable lisible : maintenant (date et heure)
-// Broches : PIN_RTC_CLK, PIN_RTC_DAT, PIN_RTC_RST dans config.h
-
-// ---------- Registres du DS1302 ----------
+//  Registres du DS1302 
 const byte REG_SEC     = 0x80;
 const byte REG_MIN     = 0x82;
 const byte REG_HEURE   = 0x84;
@@ -20,16 +10,16 @@ const byte REG_MOIS    = 0x88;
 const byte REG_ANNEE   = 0x8C;
 const byte REG_PROTECT = 0x8E;
 
-// ---------- Date et heure courantes ----------
+//  Date et heure courantes 
 DateHeure maintenant = {1, 1, 2000, 0, 0, 0};
 unsigned long derniereLecture = 0;
 const unsigned long PERIODE_LECTURE_MS = 200;
 
-// ---------- Utilitaires ----------
+//  Utilitaires 
 byte decVersBcd(byte d) { return ((d / 10) << 4) | (d % 10); }
 byte bcdVersDec(byte b) { return ((b >> 4) * 10) + (b & 0x0F); }
 
-// ---------- Communication 3 fils avec le DS1302 ----------
+//  Communication 3 fils avec le DS1302 
 void ecrireOctet(byte b) {
   pinMode(PIN_RTC_DAT, OUTPUT);
   for (int i = 0; i < 8; i++) {
@@ -71,7 +61,7 @@ byte lireRegistre(byte reg) {
   return v;
 }
 
-// ---------- Fonctions du module ----------
+//  Fonctions du module 
 void horlogeRegler(byte h, byte mi, byte s) {
   ecrireRegistre(REG_PROTECT, 0x00);          // desactive la protection en ecriture
   ecrireRegistre(REG_SEC,   decVersBcd(s));   // bit7 (CH) = 0 -> l'horloge tourne
@@ -129,7 +119,7 @@ void horlogeMettreAJour() {
 
   byte s1, s2, mi, h, j, mo, a;
   int essais = 0;
-  do {                                    // relit si les secondes ont change pendant la lecture
+  do {   // relit si les secondes ont change pendant la lecture
     s1 = lireRegistre(REG_SEC);
     mi = lireRegistre(REG_MIN);
     h  = lireRegistre(REG_HEURE);
@@ -138,7 +128,7 @@ void horlogeMettreAJour() {
     a  = lireRegistre(REG_ANNEE);
     s2 = lireRegistre(REG_SEC);
     essais++;
-  } while (s1 != s2 && essais < 3);       // 3 essais max : un module mal branche ne doit pas bloquer la boucle
+  } while (s1 != s2 && essais < 3); // 3 essais max : un module mal branche ne doit pas bloquer la boucle
 
   maintenant.seconde = bcdVersDec(s1 & 0x7F);
   maintenant.minute  = bcdVersDec(mi & 0x7F);

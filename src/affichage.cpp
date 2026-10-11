@@ -16,7 +16,7 @@ void definirLangue(uint8_t l) {
     langue = l;
 }
 
-// ET5.4 : echelle choisie avec l'encodeur (definie dans main.cpp)
+// echelle choisie avec l'encodeur (definie dans main.cpp)
 extern volatile uint8_t indexEchelle;
 static unsigned long dernierAppelGraphe = 0;
 static unsigned long resteMs = 0;
@@ -91,7 +91,7 @@ void afficherDateEcran(const char* dateStr) {
     ecran.display();
     afficherMenuSelection(0);
 }
-// --- Menu Sélection Personne + Retour + Quitter (6 choix) ---
+//  Menu Sélection Personne + Retour + Quitter (6 choix) 
 void afficherMenuSelection(uint8_t indexSelection) {
     choisirEcran(ADRESSE_ECRAN1);
     ecran.clearDisplay();
@@ -160,7 +160,7 @@ void afficherMenuSelection(uint8_t indexSelection) {
     }
     ecran.display();
 }
-// --- Menu Actions + Effacer + Retour + Quitter (5 choix) ---
+//  Menu Actions + Effacer + Retour + Quitter (5 choix) 
 void afficherMenuAction(uint8_t indexAction) {
     choisirEcran(ADRESSE_ECRAN1);
     ecran.clearDisplay();
@@ -251,7 +251,7 @@ void afficherTitreHistorique(uint8_t personneId) {
     
     ecran.display();
 }
-// --- Liste Historique + Retour + Quitter (5 choix) ---
+//  Liste Historique + Retour + Quitter (5 choix) 
 void afficherListeHistorique(uint8_t personneId, uint8_t indexHistoriqueSelection) {
     Mesure historique[3];
     recupererHistorique(personneId, historique);
@@ -429,7 +429,7 @@ void afficherEcran1(uint8_t heure, uint8_t minute, uint8_t seconde, float bpm, E
     ecran.print(F(" bpm"));
     ecran.drawBitmap(115, 43, heart_bmp, 8, 8, SSD1306_WHITE);
 
-    // ET6.2 : progression de l'enregistrement sur la derniere ligne
+    //progression de l'enregistrement sur la derniere ligne
     ecran.setTextSize(1);
     ecran.setCursor(4, 56);
     if (etat == ENREGISTREMENT_EN_COURS) {

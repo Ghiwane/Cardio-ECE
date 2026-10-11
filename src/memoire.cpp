@@ -1,8 +1,6 @@
 #include <EEPROM.h>
 #include "memoire.h"
 
-// ET6.1 : mesures gardees dans l'EEPROM interne de l'ATmega328P (conservees sans alimentation)
-// 4 personnes, 3 mesures par personne, 5 octets par mesure (valeur, heure, minute, jour, mois)
 // Taille totale occupée : 4 * 3 * 5 = 60 octets (sur 1024)
 #define NB_PERSONNES 4
 #define NB_MESURES   3
@@ -37,7 +35,7 @@ void ajouterMesure(uint8_t personneId, uint8_t valeur, uint8_t heure, uint8_t mi
     }
 }
 
-// ET6.4 : efface les 3 mesures de la personne (255 = case vide, comme une EEPROM neuve)
+//efface les 3 mesures de la personne (255 = case vide, comme une EEPROM neuve)
 void effacerHistorique(uint8_t personneId) {
     if (personneId >= NB_PERSONNES) return;
 

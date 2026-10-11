@@ -23,7 +23,7 @@ const unsigned char PROGMEM heart_bmp[] = {
     0b00000000
 };
 
-// ET6.2 : état de l'enregistrement, affiché en bas de l'écran 1
+//état de l'enregistrement, affiché en bas de l'écran 1
 enum EtatEnregistrement {
     AUCUN_ENREGISTREMENT,
     ENREGISTREMENT_EN_COURS,

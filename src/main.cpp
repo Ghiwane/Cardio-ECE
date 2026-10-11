@@ -33,12 +33,12 @@ static uint8_t personneChoisie = 0;
 static unsigned long chronoMenuQuitter = 0;
 static unsigned long chronoQuitter = 0;
 
-// ET6.2 : enregistrement = moyenne de 10 mesures consecutives (1 par seconde)
+//enregistrement = moyenne de 10 mesures consecutives (1 par seconde)
 static EtatEnregistrement etatEnregistrement = AUCUN_ENREGISTREMENT;
 static float sommeBpm = 0;
 static uint8_t nbMesures = 0;
 
-// ET5.4 : encodeur lu par interruption sur D8 (PCINT0). L'ISR compte les crans, loop() les recupere.
+//encodeur lu par interruption sur D8 (PCINT0). L'ISR compte les crans, loop() les recupere.
 volatile uint8_t indexEchelle = 2;           // 0 a 4 = 10, 20, 50, 100, 200 ms/px (lu par affichage.cpp)
 static const uint8_t NB_ECHELLES = 5;
 static volatile int8_t cransEncodeur = 0;    // +1 par cran horaire, -1 par cran anti-horaire
@@ -46,11 +46,11 @@ static uint8_t dernierCran = 0;
 
 ISR(PCINT0_vect) {
     if (digitalRead(PIN_ENCODEUR_CLK) == LOW) {
-        return;                                          // front montant seulement
+        return;  // front montant seulement
     }
     uint8_t t = (uint8_t)millis();
     if ((uint8_t)(t - dernierCran) < 5) {
-        return;                                          // anti-rebond 5 ms
+        return;  // anti-rebond 5 ms
     }
     dernierCran = t;
     if (digitalRead(PIN_ENCODEUR_DT) == LOW) {
@@ -118,11 +118,11 @@ static void rafraichirEcran1(bool immediat) {
         if (ppgBpmValide) {
             sommeBpm += ppgBpm;
             nbMesures++;
-        } else {                                         // mesures consecutives : on recommence
+        } else {   // mesures consecutives : on recommence
             sommeBpm = 0;
             nbMesures = 0;
         }
-        if (nbMesures == NB_MESURES_MOYENNE) {           // ET6.2 / ET6.3 : moyenne + date + heure du RTC
+        if (nbMesures == NB_MESURES_MOYENNE) {  // moyenne + date + heure du RTC
             uint8_t moyenne = (uint8_t)(sommeBpm / NB_MESURES_MOYENNE + 0.5);
             ajouterMesure(personneChoisie, moyenne,
                           maintenant.heure, maintenant.minute, maintenant.jour, maintenant.mois);
@@ -134,27 +134,27 @@ static void rafraichirEcran1(bool immediat) {
 }
 
 void setup() {
-    delay(200);                                  // laisse les ecrans demarrer
+    delay(200); // laisse les ecrans demarrer
     pinMode(PIN_BOUTON_MENU, INPUT_PULLUP);
     pinMode(PIN_BOUTON_ENREGISTRER, INPUT_PULLUP);
     pinMode(PIN_ENCODEUR_CLK, INPUT_PULLUP);
     pinMode(PIN_ENCODEUR_DT, INPUT_PULLUP);
-    PCICR  |= (1 << PCIE0);                      // interruptions du port B...
-    PCMSK0 |= (1 << PCINT0);                     // ... uniquement sur D8 (encodeur CLK)
+    PCICR  |= (1 << PCIE0); // interruptions du port B
+    PCMSK0 |= (1 << PCINT0);   // uniquement sur D8 (encodeur CLK)
     horlogeInit();
     etatSanteInit();
     buzzerInit();
-    Wire.setWireTimeout(25000, true);            // un ecran mal branche ne bloque pas le programme
+    Wire.setWireTimeout(25000, true); // un ecran mal branche ne bloque pas le programme
     afficherAccueil(indexLangue);
     etat = CHOIX_LANGUE;
 }
 
 void loop() {
     // Taches permanentes, quel que soit l'ecran affiche
-    int valeurPPG = ppgTraiter();                // FS1
-    horlogeMettreAJour();                        // FS2
-    afficherEtatSante(ppgBpm);                   // FS3
-    etatBuzzer(digitalRead(PIN_BOUTON_BEEP));    // FS4
+    int valeurPPG = ppgTraiter(); 
+    horlogeMettreAJour(); 
+    afficherEtatSante(ppgBpm); 
+    etatBuzzer(digitalRead(PIN_BOUTON_BEEP));  
     gererBuzzer(ppgBpm);
 
     // Entrees utilisateur
@@ -162,10 +162,10 @@ void loop() {
     bool appuiEnregistrer = boutonAppuye(boutonEnregistrer);
 
     noInterrupts();
-    int8_t crans = cransEncodeur;                // crans depuis le dernier tour
+    int8_t crans = cransEncodeur;  // crans depuis le dernier tour
     cransEncodeur = 0;
     interrupts();
-    int sens = (crans > 0) - (crans < 0);        // +1, -1 ou 0 pour les menus
+    int sens = (crans > 0) - (crans < 0);  // +1, -1 ou 0 pour les menus
 
     switch (etat) {
 
@@ -197,15 +197,15 @@ void loop() {
             if (!appuiMenu) {
                 break;
             }
-            if (indexSelection < 4) {                        // une personne
+            if (indexSelection < 4) {  
                 personneChoisie = indexSelection;
                 indexAction = 0;
                 afficherMenuAction(indexAction);
                 etat = MENU_ACTION;
-            } else if (indexSelection == 4) {                // Retour
+            } else if (indexSelection == 4) {  
                 afficherAccueil(indexLangue);
                 etat = CHOIX_LANGUE;
-            } else {                                         // Quitter
+            } else {  
                 quitter();
             }
             break;
@@ -218,20 +218,20 @@ void loop() {
             if (!appuiMenu) {
                 break;
             }
-            if (indexAction == 0) {                          // Mesurer
+            if (indexAction == 0) {                        
                 etatEnregistrement = AUCUN_ENREGISTREMENT;
                 rafraichirEcran1(true);
                 etat = MESURE_ACTIVE;
-            } else if (indexAction == 1) {                   // Historique
+            } else if (indexAction == 1) {                  
                 ouvrirHistorique();
-            } else if (indexAction == 2) {                   // Effacer l'historique
+            } else if (indexAction == 2) {                  
                 effacerHistorique(personneChoisie);
-                ouvrirHistorique();                          // on montre l'historique vide
-            } else if (indexAction == 3) {                   // Retour
+                ouvrirHistorique();                         
+            } else if (indexAction == 3) {                  
                 indexSelection = personneChoisie;
                 ouvrirSelection();
                 etat = ATTENTE_DATE;
-            } else {                                         // Quitter
+            } else {                                        
                 quitter();
             }
             break;
@@ -244,18 +244,18 @@ void loop() {
             if (!appuiMenu) {
                 break;
             }
-            if (indexHistoriqueSelection < 3) {              // une mesure
+            if (indexHistoriqueSelection < 3) {           
                 Mesure historique[3];
                 recupererHistorique(personneChoisie, historique);
                 Mesure m = historique[indexHistoriqueSelection];
-                if (m.valeur != 0 && m.valeur != 255) {      // on ouvre seulement une case remplie
+                if (m.valeur != 0 && m.valeur != 255) {    
                     afficherDetailMesure(m, personneChoisie);
                     etat = AFFICHAGE_DETAIL_HISTORIQUE;
                 }
-            } else if (indexHistoriqueSelection == 3) {      // Retour
+            } else if (indexHistoriqueSelection == 3) {       
                 afficherMenuAction(indexAction);
                 etat = MENU_ACTION;
-            } else {                                         // Quitter
+            } else {                                          
                 quitter();
             }
             break;
@@ -275,9 +275,9 @@ void loop() {
                 etat = ATTENTE_CONFIRMATION_QUITTER;
                 break;
             }
-            // ET5.4 : l'encodeur change l'echelle de temps de la courbe
+            //l'encodeur change l'echelle de temps de la courbe
             indexEchelle = constrain((int)indexEchelle + crans, 0, NB_ECHELLES - 1);
-            // ET6.2 : le bouton ENREGISTRER lance (ou relance) un enregistrement
+            // le bouton ENREGISTRER lance (ou relance) un enregistrement
             if (appuiEnregistrer) {
                 sommeBpm = 0;
                 nbMesures = 0;
@@ -288,18 +288,18 @@ void loop() {
             break;
 
         case ATTENTE_CONFIRMATION_QUITTER:
-            rafraichirEcran1(false);                         // l'enregistrement continue
+            rafraichirEcran1(false);                        
             if (appuiMenu) {
-                quitter();                                   // un enregistrement non termine est abandonne
+                quitter();                                   
             } else if (millis() - chronoMenuQuitter >= 5000) {
-                etat = MESURE_ACTIVE;                        // pas de confirmation : on reprend
+                etat = MESURE_ACTIVE;                       
             }
             break;
 
         case QUITTER:
             if (millis() - chronoQuitter >= 10000) {
                 eteindreEcrans();
-                etat = ATTENTE_ACCUEIL;                      // un nouvel appui rallume
+                etat = ATTENTE_ACCUEIL;                     
             }
             break;
     }
